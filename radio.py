@@ -37,10 +37,4 @@ myButton.pack()
 
 #Label
 
-
-
-
-
-
-
 root.mainloop()
