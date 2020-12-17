@@ -1,18 +1,14 @@
 import tkinter as tk
-from tkinter import ttk
-from tkcalendar import *
-from PIL import ImageTk,Image
-from tkinter import filedialog
-import time
 from datetime import date
-from maskedentry import MaskedWidget
-from csv import DictWriter
 from tkinter import messagebox
-from csv import DictReader
 
+from PIL import ImageTk, Image
+from tkcalendar import *
+
+from maskedentry import MaskedWidget
 
 root = tk.Tk()
-root.title("Protocolos CNJ")
+root.title("Data Validate")
 #root.iconbitmap('imagens/icon.ico')
 #root.geometry("400x400")
 
@@ -20,20 +16,10 @@ root.title("Protocolos CNJ")
 def current_time():
     todaystring = str(date.today())
 
-    # Variável Global sendo utilizada na validação do campo Data em validate()
-    global current_year
-
     todaysplit = todaystring.split("-")
     current_day = todaysplit[2]
     current_month = todaysplit[1]
     current_year = todaysplit[0]
-
-    # Parte usada para o Calendário em Período - Auxilia na parte de transformar o ano em 4 CARACTERES. Ex.:"2020"
-    global year_calendario
-    year_calendario = current_year
-    list(year_calendario)
-    year_calendario = year_calendario[2] + year_calendario[3]
-    year_calendario = int(year_calendario)
 
     today = current_day + current_month + current_year
     return today
@@ -58,111 +44,96 @@ def open_window_date(data1,data2):
     global cal
     cal = Calendar(top, selectmode="day", year=2020, month=6, day=27)
     cal.pack(pady=20, fill="both", expand=True)
-    submitedate = tk.Button(top, text="Selecionar Data", command=lambda: grab_date(data1,data2)).pack(pady=(0,10))
+    submitedate = tk.Button(top, text="Selecionar Data", command=lambda: grab_date_calendar(data1,data2)).pack(pady=(0,10))
 
-def grab_date(data1,data2):
-    # Mudando para estilo BR
+def juntar_data(dataDesejada):
+    # Função para que a data funcione na Máscara aplicada em Período
+    dataList = dataDesejada.split("/")
+    dataOficial = dataList[0]+dataList[1]+dataList[2]
+    return dataOficial
+
+def grab_date_calendar(data1, data2):
     datastring = cal.get_date()
-    data = datastring.split("/")
+    dataCalendar = juntar_data(datastring)
 
-    # Salvando em variáves de dia, mês e ano -> Acrescentando também o '0' para os meses inferiores a Outubro (10) e para Dias
-    global year
-    day = data[1]
-    month = data[0]
-    year = data[2]
-
-    if len(month) < 2:
-        month = "0" + month
-
-    if len(day) < 2:
-        day = "0" + day
-
-    yearInt = int(year)
-    if  year_calendario >= yearInt > 0:
-        year = "20"+year
-    else:
-        year = "19"+year
-
-
-    # Colocando no Entry da tela principal
     if data1 == 1:
-        data1_entry.insert(0, day+month+year)
+        data1_entry.insert(0, dataCalendar)
     if data2 == 1:
-        data2_entry.insert(0, day+month+year)
+        data2_entry.insert(0, dataCalendar)
 
     top.destroy()
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-def popuperror():
-    print("Entrei em popupError")
-    response = messagebox.showerror("Data", "Data digitada é inválida.\nTente novamente.")
-    # data1_entry.widgets.fields[dataInicial].set("")
-    data1_entry.insert(0, "")
-    data1_entry.clean()
+def dataManipulada(dataParaManipular, funcao):
+    if funcao == "inverter":
+        # SPLIT EM: DD/MM/YYYY
+        listaDeData = list(dataParaManipular.split("/"))
+        return listaDeData[2] + '-' + listaDeData[1] + '-' + listaDeData[0]
+
+    elif funcao in ["dia", "mes", "ano"]:
+        data_index = {
+            "dia": 0,
+            "mes": 1,
+            "ano": 2
+        }
+        listaDeData = list(dataParaManipular.split("/"))
+        print(f'Data para mudar: {listaDeData}')
+        print(funcao)
+        return listaDeData[data_index.get(funcao)]
+
+    elif funcao == "ano_atual":
+        data = current_time()
+        data = data[4]+data[5]+data[6]+data[7]
+        return data
 
 
-def validate(*args):
-    # print(f'Data Inicial: {data1_entry.get()}')
-    # print(f'Data Final: {data2_entry.get()}')
-    dataInicial = data1_entry.get()
-    dataFinal = data2_entry.get()
+def validate(event):
 
-    # Divindo Data Inicial ---------------------------------------------------------------------------------------
-    dataInicial_split1 = dataInicial.split("/")
+    data = event.widget.get()
+    data = data.split("/")
 
-    dataInicial_day = dataInicial_split1[0]
-    dataInicial_month = dataInicial_split1[1]
-    dataInicial_year = dataInicial_split1[2]
+    dataDay = data[0]
+    dataMonth = data[1]
+    dataYear = data[2]
 
-    # Dividindo Data Final ---------------------------------------------------------------------------------------
-    dataFinal_split1 = dataFinal.split("/")
+    if event.widget is data1_entry:
+        evento = data1_entry
+    else:
+        evento = data2_entry
 
-    dataFinal_day = dataFinal_split1[0]
-    dataFinal_month = dataFinal_split1[1]
-    dataFinal_year = dataFinal_split1[2]
+    data_Current_Year = dataManipulada(evento.get(), "ano_atual")
 
-    # print(f'Data Inicial day = {dataInicial_day}, {type(dataInicial_day)}')
-    # print(f'Data Inicial month = {dataInicial_month}, {type(dataInicial_month)}')
-    # print(f'Data Inicial year = {dataInicial_year}, {type(dataInicial_year)}\n')
-    #
-    # print(f'Data Final day = {dataFinal_day}, {type(dataFinal_day)}')
-    # print(f'Data Final month = {dataFinal_month}, {type(dataFinal_month)}')
-    # print(f'Data Final year = {dataFinal_year}, {type(dataFinal_year)}\n')
-    #
-    # print(f'Ano atual = {current_year}')
         # -------------------------------- DIA ---------------------------------------#
-    if dataInicial_day == "__" or int(dataInicial_day) > 31 or int(dataInicial_day) == 0:
-        response = messagebox.showerror("Dia Incorreto", "Preencha o campo com o valor correto.\nCampo 'Dia' em 'De:'")
-        return
-    elif dataFinal_day == "__" or int(dataFinal_day) > 31 or int(dataFinal_day) == 0:
-        response = messagebox.showerror("Dia Incorreto", "Preencha o campo com o valor correto.\nCampo 'Dia' em 'Até:'")
+    if dataDay == "__" or int(dataDay) > 31 or int(dataDay) == 0:
+        response = messagebox.showerror("Dia Incorreto", "Preencha o campo com o valor correto.")
+        evento.clean()
         return
 
         # -------------------------------- MÊS ---------------------------------------#
-    elif dataInicial_month == "__" or int(dataInicial_month) > 12 or int(dataInicial_month) == 0:
-        popuperror()
-    elif dataFinal_month == "__" or int(dataFinal_month) > 12 or int(dataFinal_month) == 0:
-        popuperror()
+    elif dataMonth == "__" or int(dataMonth) > 12 or int(dataMonth) == 0:
+        response = messagebox.showerror("Mês Incorreto", "Preencha o campo com o valor correto.")
+        evento.clean()
+        return
 
-        # -------------------------------- ANO ---------------------------------------#
-    elif int(dataInicial_year) > int(dataFinal_year) or int(dataInicial_year) < 2000 or dataInicial_year == "____":
-        popuperror()
-    elif int(dataFinal_year) > int(current_year) or dataFinal_year == "____":
-        popuperror()
+    elif dataManipulada(data1_entry.get(), "ano") == dataManipulada(data2_entry.get(), "ano"):
+        if int(dataManipulada(data1_entry.get(), "mes")) > int(dataManipulada(data2_entry.get(), "mes")):
+            response = messagebox.showerror("Mês Incorreto", "Mês inserido superior ao mês da Data Final")
+            evento.clean()
+            return
 
-
-
-
-
-
-
+        # -------------------------------- Ano ---------------------------------------#
+    elif dataYear == "____" or int(dataYear) > int(data_Current_Year) or int(dataYear) < 2000:
+        response = messagebox.showerror("Ano Incorreto", "Preencha o campo com o valor correto.")
+        evento.clean()
+        return
 
 
 
 # Parâmetros da Requisição
 frame_requisicao = tk.LabelFrame(root, text="Parâmetros da Requisição", padx=40, pady=15)
 frame_requisicao.grid(row=0, column=0, sticky=tk.E+tk.N+tk.S+tk.W, ipadx=5, ipady=5, padx=5, pady=5)
+frame_requisicao.grid_columnconfigure(0, weight=1)
 
 
 # -----------------------------------------------------------------------------------------------------
@@ -170,6 +141,12 @@ frame_requisicao.grid(row=0, column=0, sticky=tk.E+tk.N+tk.S+tk.W, ipadx=5, ipad
 # Frame para Periodo
 numero_protocolo_frame = tk.LabelFrame(frame_requisicao, text="Período Correspondido")
 numero_protocolo_frame.grid(row=5, columnspan=2, sticky=tk.E+tk.N+tk.S+tk.W, padx=5, pady=5, ipadx=5, ipady=5)
+numero_protocolo_frame.grid_columnconfigure(0, weight=1)
+numero_protocolo_frame.grid_columnconfigure(1, weight=1)
+numero_protocolo_frame.grid_columnconfigure(2, weight=1)
+numero_protocolo_frame.grid_columnconfigure(3, weight=1)
+numero_protocolo_frame.grid_columnconfigure(4, weight=1)
+numero_protocolo_frame.grid_columnconfigure(5, weight=1)
 
 # Buttons Calendar
 calendarImage = ImageTk.PhotoImage(Image.open("imagens/calendar1.png").resize((20,20), Image.ANTIALIAS))
@@ -191,6 +168,8 @@ definedate1_label.grid(row=0)
 data1_entry = MaskedWidget(numero_protocolo_frame, 'fixed', mask='99/99/9999')
 data1_entry.grid(row=0, column=1, padx=(5,0), pady=(5,5))
 
+entry_escape = tk.Entry()
+entry_escape.grid()
 
 global data2
 data2 = 0
@@ -201,17 +180,20 @@ data2_entry = MaskedWidget(numero_protocolo_frame, 'fixed', mask='99/99/9999')
 data2_entry.grid(row=0, column=4, padx=(5,0), pady=(5,5))
 
 # BIND FOCUSOUT
+data1_entry.bind("<FocusOut>", validate)
 data2_entry.bind("<FocusOut>", validate)
 
+# Essa parte não existe mais
 today = current_time()
 data2_entry.insert(0, today)
 
 # -----------------------------------------------------------------------------------------------------
 
-
 buscar_paginas = tk.Button(frame_requisicao, text="Buscar Páginas")
 buscar_paginas.grid(row=6, column=1, sticky=tk.E+tk.N+tk.S+tk.W, pady=(5,0))
 
 # -----------------------------------------------------------------------------------------------------
+
+root.grid_columnconfigure(0, weight=1)
 
 root.mainloop()

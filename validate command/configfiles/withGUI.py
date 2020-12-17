@@ -1,10 +1,12 @@
 import tkinter as tk
+import os
 from tkinter import ttk
 from tkcalendar import *
 from PIL import ImageTk,Image
 from datetime import date
 from maskedentry import MaskedWidget
 from configparser import ConfigParser
+from tkinter import filedialog
 
 root = tk.Tk()
 root.title("Protocolos CNJ")
@@ -21,6 +23,23 @@ listaCombobox=[ "Aguardando Processamento",
                 "Erro no arquivo"]
 
 # Funções
+def openfile():
+    root.filename = filedialog.askopenfilename(initialdir="/", title="Select a File", filetypes=(("Todos os Arquivos", "*.*"), ("PDF Files", "*.pdf"),("JPG Files","*.jpg"), ("PNG Files","*.png")))
+    saveasfile_Entry.delete(0, tk.END)
+    saveasfile_Entry.insert(0, root.filename)
+
+def switch_button_state():
+    if (check2['state'] == tk.NORMAL and saveasfile_Entry['state'] == tk.NORMAL and selectfile_button['state'] == tk.NORMAL):
+        check2['state'] = tk.DISABLED
+        # saveasfile_Entry.delete(0, tk.END)
+        saveasfile_Entry['state'] = tk.DISABLED
+        selectfile_button['state'] = tk.DISABLED
+        check2.deselect()
+
+    else:
+        check2['state'] = tk.NORMAL
+        saveasfile_Entry['state'] = tk.NORMAL
+        selectfile_button['state'] = tk.NORMAL
 # Dia atual função
 def current_time():
     todaystring = str(date.today())
@@ -64,6 +83,11 @@ def open_window_date(data1, data2):
     cal.pack(pady=20, fill="both", expand=True)
     submitedate = tk.Button(top, text="Selecionar Data", command=lambda: grab_date(data1, data2)).pack(pady=(0, 10))
 
+def juntar_data(dataDesejada):
+    # Função para que a data funcione na Máscara aplicada em Período
+    dataList = dataDesejada.split("/")
+    dataOficial = dataList[0]+dataList[1]+dataList[2]
+    return dataOficial
 
 def grab_date(data1, data2):
     datastring = cal.get_date()
@@ -94,25 +118,112 @@ def clear_all_requisicao():
     numProtocolo_entry.delete(0, tk.END)
     combobox.current(0)
 
+def indexdocombobox():
+    comboboxatual = str(combobox.current())
+    index_trt = {
+        "0": "1",
+        "1": "3",
+        "2": "5",
+        "3": "6",
+        "4": "7"
+    }
+    return index_trt.get(comboboxatual)
+
+
 
 def salvardados(*args):
-    config['aplicacao']['urlEndpoint'] = urlCNJ_entry.get()
-    config['aplicacao']['tribunal'] = tribunal_entry.get()
-    config['aplicacao']['passwordTribunal'] = passwordTribunal_entry.get()
-    config['aplicacao']['numProtocolo'] = numProtocolo_entry.get()
-    config['aplicacao']['statusLabel'] = combobox.get()
-    config['aplicacao']['statusIndex'] = str(combobox.current())
+    # Requisição
+    config['requisicao']['urlEndpoint'] = urlCNJ_entry.get()
+    config['requisicao']['tribunal'] = tribunal_entry.get()
+    config['requisicao']['passwordTribunal'] = passwordTribunal_entry.get()
+    config['requisicao']['numProtocolo'] = numProtocolo_entry.get()
+    config['requisicao']['statusLabel'] = combobox.get()
+    config['requisicao']['statusIndex'] = str(indexdocombobox())
+    dataDe_memoria = juntar_data(data1_entry.get())
+    config['requisicao']['data_de'] = dataDe_memoria
+
+    # Aplicação
+    config['aplicacao']['savefile'] = str(salvarcomoarquivo.get())
+    config['aplicacao']['sobrescrever'] = str(sobrescrever.get())
+    config['aplicacao']['salvarbanco'] = str(savedatabase.get())
+    if saveasfile_Entry['state'] == tk.NORMAL:
+        config['aplicacao']['arquivonome'] = saveasfile_Entry.get()
 
     with open(file, 'w') as configfile:
         config.write(configfile)
 
 
 def recuperardados():
-    urlCNJ_entry.insert(0, config['aplicacao']['urlEndpoint'])
-    tribunal_entry.insert(0, config['aplicacao']['tribunal'])
-    passwordTribunal_entry.insert(0, config['aplicacao']['passwordTribunal'])
-    numProtocolo_entry.insert(0, config['aplicacao']['numProtocolo'])
-    combobox.insert(0, config['aplicacao']['statusLabel'])
+
+    pass
+    # # Requisição
+    # urlCNJ_entry.insert(0, config['requisicao']['urlEndpoint'])
+    # tribunal_entry.insert(0, config['requisicao']['tribunal'])
+    # passwordTribunal_entry.insert(0, config['requisicao']['passwordTribunal'])
+    # numProtocolo_entry.insert(0, config['requisicao']['numProtocolo'])
+    # combobox.insert(0, config['requisicao']['statusLabel'])
+    #
+    # # Aplicação
+    # if config['aplicacao']['savefile'] == 'True':
+    #     salvarcomoarquivo.set(1)
+    #
+    #     check2['state'] = tk.NORMAL
+    #     saveasfile_Entry['state'] = tk.NORMAL
+    #
+    #     saveasfile_Entry.insert(0, config['aplicacao']['arquivonome'])
+    #
+    #     if config['aplicacao']['sobrescrever'] == 'True':
+    #         sobrescrever.set(1)
+    # else:
+    #     salvarcomoarquivo.set(0)
+    #     sobrescrever.set(0)
+    #
+    #     check2['state'] = tk.DISABLED
+    #     saveasfile_Entry['state'] = tk.DISABLED
+    #
+    # if config['aplicacao']['salvarbanco'] == 'True':
+    #     savedatabase.set(1)
+    # else:
+    #     savedatabase.set(0)
+
+
+
+#---------------------------------------------------------------------------------------------
+
+# Parametros de Aplicação
+frame_aplicacao = tk.LabelFrame(root, text="Parâmetros de Aplicação", padx=5, pady=5)
+frame_aplicacao.grid(row=0, column=1, padx=5, pady=5, ipadx=5, ipady=5, sticky=tk.E+tk.N+tk.W+tk.S)
+
+# CheckBoxes
+salvarcomoarquivo = tk.BooleanVar()
+sobrescrever = tk.BooleanVar()
+savedatabase = tk.BooleanVar()
+
+# FIRST FRAME - PARÂMETRO DE APLICAÇÃO
+check1 = tk.Checkbutton(frame_aplicacao, text="Salvar em Arquivo", variable=salvarcomoarquivo, command=switch_button_state)
+check1.bind("<Leave>", salvardados)
+# print(f'Saveasfile: {salvarcomoarquivo.get()}\nSobrescrever: {sobrescrever.get()}\nSaveDataBase: {savedatabase.get()}')
+check1.grid(row=0, sticky=tk.W)
+
+check2 = tk.Checkbutton(frame_aplicacao, text="Sobrescrever conteúdo\n anterior do arquivo", variable=sobrescrever)
+check2.bind("<Leave>", salvardados)
+check2.grid(row=1, padx=(10,0))
+
+namefile_label = tk.Label(frame_aplicacao, text="Nome arquivo: ")
+namefile_label.grid(row=1, column=1, sticky=tk.E)
+saveasfile_Entry = tk.Entry(frame_aplicacao, width=30)
+saveasfile_Entry.grid(row=1,column=2)
+
+selectfile_button = tk.Button(frame_aplicacao, text="Select a File", relief=tk.RAISED, command=openfile)
+selectfile_button.grid(row=1,column=3, padx=15)
+
+
+check3 = tk.Checkbutton(frame_aplicacao, text="Salvar em Banco de Dados", variable=savedatabase)
+check3.bind("<Leave>", salvardados)
+# check3.deselect()
+check3.grid(row=3, sticky=tk.W)
+
+# -----------------------------------------------------------------------------------------------------
 
 
 # Parâmetros da Requisição
@@ -195,4 +306,5 @@ buscar_paginas = tk.Button(frame_requisicao, text="Buscar Páginas")
 buscar_paginas.grid(row=6, column=1, sticky=tk.E+tk.N+tk.S+tk.W, pady=(5,0))
 
 recuperardados()
+# print(f'\nSituação Atual:\nSaveasfile: {salvarcomoarquivo.get()}\nSobrescrever: {sobrescrever.get()}\nSaveDataBase: {savedatabase.get()}')
 root.mainloop()

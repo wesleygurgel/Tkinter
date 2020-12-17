@@ -6,11 +6,13 @@ root.title("Viewer")
 root.iconbitmap('imagens/icon.ico')
 root.geometry("400x400") #Define o tamanho do root
 
-var = StringVar()
-var2 = StringVar()
+var = BooleanVar()
+var2 = BooleanVar()
 #c = Checkbutton(root, text="Check this box, I dare you!", variable=var).pack()
-c = Checkbutton(root, text="Check this box, I dare you!", variable=var, onvalue="Checked", offvalue="Unchecked")
-d = Checkbutton(root, text="You Like food?", variable=var2, onvalue="Yes, I like", offvalue="No, i don't")
+
+c = Checkbutton(root, text="Check this box, I dare you!", variable=var)
+d = Checkbutton(root, text="You Like food?", variable=var2)
+
 c.pack()
 c.deselect()
 d.pack()
@@ -23,6 +25,7 @@ def show():
     #     myLabel = Label(root, text="Checked").pack()
     myLabel = Label(root, text=var.get()).pack()
     myLabel2 = Label(root, text=var2.get()).pack()
+    var2.set(0)
 
 myButton = Button(root, text="Checked or Unchecked:?", command=show).pack()
 
